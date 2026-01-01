@@ -16,13 +16,13 @@ public class Main {
         ImageProvider imageProvider = ImageProvider.with(store.images());
         SwingImageDisplay imageDisplay = new SwingImageDisplay();
         imageDisplay.show(imageProvider.first(Main::readImage));
-        Desktop.create(imageDisplay)
+        Desktop.create(imageDisplay, imageProvider)
                 .put("next", new NextCommand(imageDisplay))
                 .put("prev", new PrevCommand(imageDisplay))
                 .setVisible(true);
     }
 
-    private static byte[] readImage(String id) {
+    public static byte[] readImage(String id) {
         try {
             return Files.readAllBytes(new File(root, id).toPath());
         } catch (IOException e) {

@@ -15,12 +15,15 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
 public class SwingImageDisplay extends JPanel implements ImageDisplay {
+    private final ImageViewStateRepository stateRepository;
     private Image image;
     private BufferedImage bitmap;
     private int initShiftX;
     private int offsetX;
 
     public SwingImageDisplay() {
+        this.stateRepository = new ImageViewStateRepository();
+
         this.addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
@@ -42,6 +45,13 @@ public class SwingImageDisplay extends JPanel implements ImageDisplay {
                 repaint();
             }
         });
+
+        this.addMouseWheelListener(e -> {
+            ImageTransformController controller = new ImageTransformController(this, stateRepository);
+            if (e.getPreciseWheelRotation() < 0) controller.zoomIn();
+            else controller.zoomOut();
+        });
+
     }
 
     private void changeImageIfShowingMoreThanHalf(int delta) {
@@ -67,24 +77,53 @@ public class SwingImageDisplay extends JPanel implements ImageDisplay {
     }
 
     @Override
-    public void paint(Graphics g) {
-        super.paint(g);
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
 
-        g.fillRect(0,0,this.getWidth(), this.getHeight());
+        // Fondo cian claro
+        g.setColor(new Color(0xD5, 0xD2, 0xF5));
+        g.fillRect(0, 0, getWidth(), getHeight());
 
-        if (bitmap == null) return;
-        Canvas canvas = Canvas.ofSize(this.getWidth(), this.getHeight())
+        if (bitmap == null || image == null) return;
+
+        // Estado visual de la imagen actual
+        ImageViewState state = stateRepository.stateOf(image.id());
+
+        Canvas canvas = Canvas.ofSize(getWidth(), getHeight())
                 .fit(bitmap.getWidth(), bitmap.getHeight());
 
-        int x = (this.getWidth() - canvas.width()) / 2 + offsetX;
-        int y = (this.getHeight() - canvas.height()) / 2;
-        g.drawImage(bitmap, x, y, canvas.width(), canvas.height(), null);
+        double zoom = state.zoom();
+        double rotation = Math.toRadians(state.rotation());
 
-        if (offsetX == 0) return;
-        BufferedImage nextBitmap = readBitmap(offsetX < 0 ? image.next() : image.previous());
-        int x1 = x -  sign(offsetX) * canvas.width();
-        g.drawImage(nextBitmap, x1, y, canvas.width(), canvas.height(), null);
+        double scaledWidth = canvas.width() * zoom;
+        double scaledHeight = canvas.height() * zoom;
+
+        // Calculamos el centro del panel
+        double centerX = getWidth() / 2.0;
+        double centerY = getHeight() / 2.0;
+
+        // Coordenadas para que la imagen esté centrada
+        double x = centerX - scaledWidth / 2 + offsetX;
+        double y = centerY - scaledHeight / 2;
+
+        Graphics2D g2 = (Graphics2D) g.create();
+
+        // Aplicar transformaciones centradas
+        g2.translate(x + scaledWidth / 2, y + scaledHeight / 2); // mover al centro de la imagen
+        g2.rotate(rotation);                                     // aplicar rotación
+        g2.translate(-scaledWidth / 2, -scaledHeight / 2);      // volver al origen superior izquierdo
+
+        g2.drawImage(bitmap, 0, 0, (int) scaledWidth, (int) scaledHeight, null);
+        g2.dispose();
+
+        // Imagen siguiente/anterior durante arrastre
+        if (offsetX != 0) {
+            BufferedImage nextBitmap = readBitmap(offsetX < 0 ? image.next() : image.previous());
+            double x1 = x - sign(offsetX) * canvas.width();
+            g.drawImage(nextBitmap, (int) x1, (int) y, canvas.width(), canvas.height(), null);
+        }
     }
+
 
     private static int sign(int value) {
         return value < 0 ? -1 : 1;
@@ -101,4 +140,9 @@ public class SwingImageDisplay extends JPanel implements ImageDisplay {
             throw new RuntimeException(e);
         }
     }
+    // dentro de SwingImageDisplay
+    public ImageViewStateRepository getStateRepository() {
+        return stateRepository;
+    }
+
 }
