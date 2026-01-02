@@ -12,6 +12,8 @@ import javax.imageio.ImageIO;
 import java.io.IOException;
 import java.util.List;
 
+import static java.awt.Image.SCALE_SMOOTH;
+
 public class ThumbnailBar extends JPanel {
 
     private final SwingImageDisplay mainDisplay;
@@ -21,6 +23,10 @@ public class ThumbnailBar extends JPanel {
         this.mainDisplay = display;
         this.images = images;
 
+        setLayout();
+    }
+
+    private void setLayout() {
         setLayout(new FlowLayout(FlowLayout.CENTER, 10, 5));
         setBackground(new Color(237, 236, 250));
         updateThumbnails();
@@ -32,22 +38,10 @@ public class ThumbnailBar extends JPanel {
         for (Image img : images) {
             try {
                 BufferedImage thumb = ImageIO.read(new ByteArrayInputStream(img.bitmap()));
-                // Escalar a miniatura de 80x60 px
                 ImageIcon icon = new ImageIcon(
-                        thumb.getScaledInstance(80, 60, java.awt.Image.SCALE_SMOOTH)
+                        thumb.getScaledInstance(80, 60, SCALE_SMOOTH)
                 );
-
-                JLabel label = new JLabel(icon);
-                label.setBorder(BorderFactory.createLineBorder(
-                        img == mainDisplay.image() ? Color.BLUE : Color.LIGHT_GRAY, 2));
-                label.addMouseListener(new MouseAdapter() {
-                    @Override
-                    public void mouseClicked(MouseEvent e) {
-                        mainDisplay.show(img); // cambiar imagen central
-                        updateThumbnails();    // actualizar borde azul
-                    }
-                });
-                add(label);
+                stablishing_colors(img, new JLabel(icon));
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -56,8 +50,16 @@ public class ThumbnailBar extends JPanel {
         repaint();
     }
 
-    // Llamar cuando cambie la imagen central
-    public void refresh() {
-        updateThumbnails();
+    private void stablishing_colors(Image img, JLabel label) {
+        label.setBorder(BorderFactory.createLineBorder(
+                img == mainDisplay.image() ? Color.BLUE : Color.LIGHT_GRAY, 2));
+        label.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                mainDisplay.show(img);
+                updateThumbnails();
+            }
+        });
+        add(label);
     }
 }

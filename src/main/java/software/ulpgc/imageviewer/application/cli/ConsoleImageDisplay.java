@@ -17,6 +17,5 @@ public class ConsoleImageDisplay implements ImageDisplay {
     }
 
     @Override
-    public void repaint() {
-    }
+    public void repaint() {}
 }

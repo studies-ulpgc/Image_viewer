@@ -14,8 +14,4 @@ public class ImageViewStateRepository {
     public ImageViewState stateOf(String imageId) {
         return states.computeIfAbsent(imageId, id -> new ImageViewState());
     }
-
-    public void clear() {
-        states.clear();
-    }
 }

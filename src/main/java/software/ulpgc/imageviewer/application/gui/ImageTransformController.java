@@ -67,6 +67,6 @@ public class ImageTransformController {
     public void zoomTo(double factor) {
         double newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, factor));
         state().setZoom(newZoom);
-        display.repaint(); // Solo repinta, no recargues el bitmap aquí
+        display.repaint();
     }
 }

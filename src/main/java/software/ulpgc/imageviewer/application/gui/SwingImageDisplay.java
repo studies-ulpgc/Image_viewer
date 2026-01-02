@@ -10,7 +10,6 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
-import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -27,6 +26,7 @@ public class SwingImageDisplay extends JPanel implements ImageDisplay {
 
     public SwingImageDisplay() {
         this.stateRepository = new ImageViewStateRepository();
+        this.controller = new ImageTransformController(this, stateRepository);
 
         addMouseListener(new MouseAdapter() {
             @Override
@@ -50,8 +50,6 @@ public class SwingImageDisplay extends JPanel implements ImageDisplay {
             }
         });
 
-        this.controller = new ImageTransformController(this, stateRepository);
-
         addMouseWheelListener(e -> {
             double amount = -e.getPreciseWheelRotation() * 0.1;
             ImageViewState state = stateRepository.stateOf(image.id());
@@ -74,11 +72,11 @@ public class SwingImageDisplay extends JPanel implements ImageDisplay {
     @Override
     public void show(Image image) {
         if (this.image != null && this.image.id().equals(image.id())) {
-            repaint(); // Solo repinta si es la misma
+            repaint(); 
             return;
         }
         this.image = image;
-        this.bitmap = readBitmap(); // Carga real solo si cambia de foto
+        this.bitmap = readBitmap();
         repaint();
     }
 
@@ -86,7 +84,6 @@ public class SwingImageDisplay extends JPanel implements ImageDisplay {
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
-        // Fondo azul claro
         g.setColor(new Color(237, 236, 250));
         g.fillRect(0, 0, getWidth(), getHeight());
 
@@ -97,6 +94,19 @@ public class SwingImageDisplay extends JPanel implements ImageDisplay {
         Canvas canvas = Canvas.ofSize(getWidth(), getHeight())
                 .fit(bitmap.getWidth(), bitmap.getHeight());
 
+        Result result = getResult(state, canvas);
+
+        draw_transformed_image((Graphics2D) g.create(), result.x(), result.scaledWidth(), result.y(), result.scaledHeight(), result.rotation());
+
+        if (offsetX == 0) return;
+        BufferedImage nextBitmap =
+                readBitmap(offsetX < 0 ? image.next() : image.previous());
+        int x1 = (int) (result.x() - Math.signum(offsetX) * canvas.width());
+        g.drawImage(nextBitmap, x1, (int) result.y(),
+                canvas.width(), canvas.height(), null);
+    }
+
+    private Result getResult(ImageViewState state, Canvas canvas) {
         double zoom = state.zoom();
         double rotation = Math.toRadians(state.rotation());
 
@@ -108,8 +118,14 @@ public class SwingImageDisplay extends JPanel implements ImageDisplay {
 
         double x = centerX - scaledWidth / 2 + offsetX;
         double y = centerY - scaledHeight / 2;
+        Result result = new Result(rotation, scaledWidth, scaledHeight, x, y);
+        return result;
+    }
 
-        Graphics2D g2 = (Graphics2D) g.create();
+    private record Result(double rotation, double scaledWidth, double scaledHeight, double x, double y) {
+    }
+
+    private void draw_transformed_image(Graphics2D g2, double x, double scaledWidth, double y, double scaledHeight, double rotation) {
         g2.translate(x + scaledWidth / 2, y + scaledHeight / 2);
         g2.rotate(rotation);
         g2.translate(-scaledWidth / 2, -scaledHeight / 2);
@@ -117,15 +133,6 @@ public class SwingImageDisplay extends JPanel implements ImageDisplay {
         g2.drawImage(bitmap, 0, 0,
                 (int) scaledWidth, (int) scaledHeight, null);
         g2.dispose();
-
-        // Imagen siguiente/anterior durante drag
-        if (offsetX != 0) {
-            BufferedImage nextBitmap =
-                    readBitmap(offsetX < 0 ? image.next() : image.previous());
-            int x1 = (int) (x - Math.signum(offsetX) * canvas.width());
-            g.drawImage(nextBitmap, x1, (int) y,
-                    canvas.width(), canvas.height(), null);
-        }
     }
 
     private BufferedImage readBitmap() {

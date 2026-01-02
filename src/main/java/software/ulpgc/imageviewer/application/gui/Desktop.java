@@ -2,14 +2,12 @@ package software.ulpgc.imageviewer.application.gui;
 
 import software.ulpgc.imageviewer.application.commands.*;
 import software.ulpgc.imageviewer.architecture.Command;
-import software.ulpgc.imageviewer.architecture.Image;
 import software.ulpgc.imageviewer.architecture.ImageProvider;
 
 import javax.swing.*;
 import java.awt.*;
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 import static java.awt.BorderLayout.NORTH;
@@ -35,25 +33,23 @@ public class Desktop extends JFrame {
         this.setLayout(new BorderLayout());
         this.controller = new ImageTransformController(imageDisplay, imageDisplay.getStateRepository());
 
-        // 🆕 ImageTransformController
-        ImageTransformController controller =
-                new ImageTransformController(imageDisplay, imageDisplay.getStateRepository());
-
-        // 🆕 Inicializar comandos
-        initCommands(controller);
+        initCommands(new ImageTransformController(imageDisplay, imageDisplay.getStateRepository()));
 
         this.createToolbar();
-
         this.getContentPane().add(imageDisplay, BorderLayout.CENTER);
+        
+        thumbnailBar = new ThumbnailBar(imageDisplay, imageProvider.allImages(Main::readImage));
+        JScrollPane scroll = getJScrollPane();
+        this.getContentPane().add(scroll, SOUTH);
 
-        List<Image> allImages = imageProvider.allImages(Main::readImage);
-        thumbnailBar = new ThumbnailBar(imageDisplay, allImages);
+    }
+
+    private JScrollPane getJScrollPane() {
         JScrollPane scroll = new JScrollPane(thumbnailBar,
                 JScrollPane.VERTICAL_SCROLLBAR_NEVER,
                 JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         scroll.setBorder(null);
-        this.getContentPane().add(scroll, SOUTH);
-
+        return scroll;
     }
 
     private void createToolbar() {
@@ -66,7 +62,6 @@ public class Desktop extends JFrame {
         commands.put("zoomIn", new ZoomInCommand(controller, zoomSlider));
         commands.put("zoomOut", new ZoomOutCommand(controller, zoomSlider));
         commands.put("resetZoom", new ResetZoomCommand(controller, zoomSlider));
-
         commands.put("rotate", new RotateCommand(controller));
         commands.put("resetRotation", new ResetRotationCommand(controller));
     }
@@ -75,13 +70,21 @@ public class Desktop extends JFrame {
         JPanel panel = new JPanel(new FlowLayout(CENTER));
         panel.setBackground(new Color(237, 236, 250));
 
-        // Prev/Next con flechas
         panel.add(button("prev", "←"));
         panel.add(button("next", "→"));
 
         panel.add(button("zoomIn", "+"));
         panel.add(button("zoomOut", "-"));
 
+        set_zoom_slider(panel);
+
+        panel.add(button("resetZoom", "Reset Zoom"));
+        panel.add(button("rotate", "⟳"));
+        panel.add(button("resetRotation", "Reset Rotate"));
+        return panel;
+    }
+
+    private void set_zoom_slider(JPanel panel) {
         zoomSlider = new JSlider(20, 500, 100);
         zoomSlider.setPreferredSize(new Dimension(150, 20));
         zoomSlider.setBackground(new Color(237, 236, 250));
@@ -90,37 +93,26 @@ public class Desktop extends JFrame {
         zoomSlider.setPaintTicks(false);
         zoomSlider.setPaintLabels(false);
         zoomSlider.addChangeListener(e -> {
-            // Solo actuamos si el usuario está moviendo el slider manualmente
             if (zoomSlider.getValueIsAdjusting()) {
                 controller.zoomTo(zoomSlider.getValue() / 100.0);
             }
         });
         panel.add(zoomSlider);
-
-        panel.add(button("resetZoom", "Reset Zoom"));
-        panel.add(button("rotate", "⟳"));
-        panel.add(button("resetRotation", "Reset Rotate"));
-        return panel;
-    }
-
-    public void updateLabels() {
-        Image image = imageDisplay.image();
-        if (image != null) {
-            double currentZoom = imageDisplay.getStateRepository()
-                    .stateOf(image.id()).zoom();
-            zoomSlider.setValue((int) (currentZoom * 100));
-        }
     }
 
     private JButton button(String name, String label) {
         JButton button = new JButton(label);
+        extract_button_colors(button);
+        button.addActionListener(e -> commands.get(name).execute());
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        return button;
+    }
+
+    private static void extract_button_colors(JButton button) {
         button.setFocusPainted(false);
         button.setBorderPainted(false);
         button.setContentAreaFilled(false);
         button.setOpaque(false);
-        button.addActionListener(e -> commands.get(name).execute());
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        return button;
     }
 
     public Desktop put(String name, Command command) {
