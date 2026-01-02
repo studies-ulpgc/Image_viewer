@@ -10,21 +10,25 @@ import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
+import java.awt.geom.AffineTransform;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 
 public class SwingImageDisplay extends JPanel implements ImageDisplay {
+
     private final ImageViewStateRepository stateRepository;
+    private final ImageTransformController controller;
     private Image image;
     private BufferedImage bitmap;
+
     private int initShiftX;
     private int offsetX;
 
     public SwingImageDisplay() {
         this.stateRepository = new ImageViewStateRepository();
 
-        this.addMouseListener(new MouseAdapter() {
+        addMouseListener(new MouseAdapter() {
             @Override
             public void mousePressed(MouseEvent e) {
                 initShiftX = e.getX();
@@ -38,7 +42,7 @@ public class SwingImageDisplay extends JPanel implements ImageDisplay {
             }
         });
 
-        this.addMouseMotionListener(new MouseMotionAdapter() {
+        addMouseMotionListener(new MouseMotionAdapter() {
             @Override
             public void mouseDragged(MouseEvent e) {
                 offsetX = e.getX() - initShiftX;
@@ -46,22 +50,20 @@ public class SwingImageDisplay extends JPanel implements ImageDisplay {
             }
         });
 
-        this.addMouseWheelListener(e -> {
-            ImageTransformController controller = new ImageTransformController(this, stateRepository);
-            if (e.getPreciseWheelRotation() < 0) controller.zoomIn();
-            else controller.zoomOut();
-        });
+        this.controller = new ImageTransformController(this, stateRepository);
 
+        addMouseWheelListener(e -> {
+            double amount = -e.getPreciseWheelRotation() * 0.1;
+            ImageViewState state = stateRepository.stateOf(image.id());
+            state.setZoom(Math.max(0.1, state.zoom() + amount));
+            repaint();
+        });
     }
 
     private void changeImageIfShowingMoreThanHalf(int delta) {
-        if (showingLessThanHalfofImage(delta)) return;
+        if (Math.abs(delta) <= getWidth() / 2) return;
         image = delta > 0 ? image.previous() : image.next();
         bitmap = readBitmap();
-    }
-
-    private boolean showingLessThanHalfofImage(int delta) {
-        return Math.abs(delta) <= getWidth() / 2;
     }
 
     @Override
@@ -71,22 +73,25 @@ public class SwingImageDisplay extends JPanel implements ImageDisplay {
 
     @Override
     public void show(Image image) {
+        if (this.image != null && this.image.id().equals(image.id())) {
+            repaint(); // Solo repinta si es la misma
+            return;
+        }
         this.image = image;
-        this.bitmap = readBitmap();
-        this.repaint();
+        this.bitmap = readBitmap(); // Carga real solo si cambia de foto
+        repaint();
     }
 
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
-        // Fondo cian claro
-        g.setColor(new Color(0xD5, 0xD2, 0xF5));
+        // Fondo azul claro
+        g.setColor(new Color(237, 236, 250));
         g.fillRect(0, 0, getWidth(), getHeight());
 
         if (bitmap == null || image == null) return;
 
-        // Estado visual de la imagen actual
         ImageViewState state = stateRepository.stateOf(image.id());
 
         Canvas canvas = Canvas.ofSize(getWidth(), getHeight())
@@ -98,35 +103,29 @@ public class SwingImageDisplay extends JPanel implements ImageDisplay {
         double scaledWidth = canvas.width() * zoom;
         double scaledHeight = canvas.height() * zoom;
 
-        // Calculamos el centro del panel
         double centerX = getWidth() / 2.0;
         double centerY = getHeight() / 2.0;
 
-        // Coordenadas para que la imagen esté centrada
         double x = centerX - scaledWidth / 2 + offsetX;
         double y = centerY - scaledHeight / 2;
 
         Graphics2D g2 = (Graphics2D) g.create();
+        g2.translate(x + scaledWidth / 2, y + scaledHeight / 2);
+        g2.rotate(rotation);
+        g2.translate(-scaledWidth / 2, -scaledHeight / 2);
 
-        // Aplicar transformaciones centradas
-        g2.translate(x + scaledWidth / 2, y + scaledHeight / 2); // mover al centro de la imagen
-        g2.rotate(rotation);                                     // aplicar rotación
-        g2.translate(-scaledWidth / 2, -scaledHeight / 2);      // volver al origen superior izquierdo
-
-        g2.drawImage(bitmap, 0, 0, (int) scaledWidth, (int) scaledHeight, null);
+        g2.drawImage(bitmap, 0, 0,
+                (int) scaledWidth, (int) scaledHeight, null);
         g2.dispose();
 
-        // Imagen siguiente/anterior durante arrastre
+        // Imagen siguiente/anterior durante drag
         if (offsetX != 0) {
-            BufferedImage nextBitmap = readBitmap(offsetX < 0 ? image.next() : image.previous());
-            double x1 = x - sign(offsetX) * canvas.width();
-            g.drawImage(nextBitmap, (int) x1, (int) y, canvas.width(), canvas.height(), null);
+            BufferedImage nextBitmap =
+                    readBitmap(offsetX < 0 ? image.next() : image.previous());
+            int x1 = (int) (x - Math.signum(offsetX) * canvas.width());
+            g.drawImage(nextBitmap, x1, (int) y,
+                    canvas.width(), canvas.height(), null);
         }
-    }
-
-
-    private static int sign(int value) {
-        return value < 0 ? -1 : 1;
     }
 
     private BufferedImage readBitmap() {
@@ -140,9 +139,8 @@ public class SwingImageDisplay extends JPanel implements ImageDisplay {
             throw new RuntimeException(e);
         }
     }
-    // dentro de SwingImageDisplay
+
     public ImageViewStateRepository getStateRepository() {
         return stateRepository;
     }
-
 }

@@ -8,10 +8,9 @@ public class ImageTransformController {
     private final ImageDisplay display;
     private final ImageViewStateRepository stateRepository;
 
-    // límites razonables de zoom
     private static final double MIN_ZOOM = 0.2;
     private static final double MAX_ZOOM = 5.0;
-    private static final double ZOOM_STEP = 0.1;
+    private static final double ZOOM_STEP = 0.4;
 
     public ImageTransformController(ImageDisplay display,
                                     ImageViewStateRepository stateRepository) {
@@ -42,8 +41,6 @@ public class ImageTransformController {
         refresh();
     }
 
-    /* ------------------ helpers ------------------ */
-
     private void applyZoom(double delta) {
         double newZoom = state().zoom() + delta;
         newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newZoom));
@@ -58,19 +55,18 @@ public class ImageTransformController {
     }
 
     private void refresh() {
-        display.show(display.image());
+        display.repaint();
     }
 
     public double getCurrentZoom() {
         Image image = display.image();
-        if (image == null) return 1.0; // valor por defecto
+        if (image == null) return 1.0;
         return stateRepository.stateOf(image.id()).zoom();
     }
 
-    public double getCurrentRotation() {
-        Image image = display.image();
-        if (image == null) return 0.0;
-        return stateRepository.stateOf(image.id()).rotation();
+    public void zoomTo(double factor) {
+        double newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, factor));
+        state().setZoom(newZoom);
+        display.repaint(); // Solo repinta, no recargues el bitmap aquí
     }
-
 }

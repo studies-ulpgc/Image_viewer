@@ -20,6 +20,7 @@ public class Desktop extends JFrame {
     private final Map<String, Command> commands;
     private final SwingImageDisplay imageDisplay;
     private ThumbnailBar thumbnailBar;
+    private ImageTransformController controller;
 
     public static Desktop create(SwingImageDisplay imageDisplay, ImageProvider imageProvider) throws IOException {
         return new Desktop(imageDisplay, imageProvider);
@@ -32,6 +33,7 @@ public class Desktop extends JFrame {
         this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         this.setSize(800, 600);
         this.setLayout(new BorderLayout());
+        this.controller = new ImageTransformController(imageDisplay, imageDisplay.getStateRepository());
 
         // 🆕 ImageTransformController
         ImageTransformController controller =
@@ -42,12 +44,7 @@ public class Desktop extends JFrame {
 
         this.createToolbar();
 
-        // Panel principal
-        this.getContentPane().add(imageDisplay);
-        this.setLocationRelativeTo(null);
-
-        this.setLocationRelativeTo(null);
-        this.getContentPane().add(imageDisplay);
+        this.getContentPane().add(imageDisplay, BorderLayout.CENTER);
 
         List<Image> allImages = imageProvider.allImages(Main::readImage);
         thumbnailBar = new ThumbnailBar(imageDisplay, allImages);
@@ -76,7 +73,7 @@ public class Desktop extends JFrame {
 
     private JPanel toolbar() {
         JPanel panel = new JPanel(new FlowLayout(CENTER));
-        panel.setBackground(new Color(0xD5, 0xD2, 0xF5));
+        panel.setBackground(new Color(237, 236, 250));
 
         // Prev/Next con flechas
         panel.add(button("prev", "←"));
@@ -85,48 +82,42 @@ public class Desktop extends JFrame {
         panel.add(button("zoomIn", "+"));
         panel.add(button("zoomOut", "-"));
 
-
-        // Barra de zoom
         zoomSlider = new JSlider(20, 500, 100);
         zoomSlider.setPreferredSize(new Dimension(150, 20));
+        zoomSlider.setBackground(new Color(237, 236, 250));
+        zoomSlider.setForeground(new Color(84, 100, 172));
+        zoomSlider.setPaintTrack(true);
+        zoomSlider.setPaintTicks(false);
+        zoomSlider.setPaintLabels(false);
         zoomSlider.addChangeListener(e -> {
-            if (imageDisplay.image() != null) {
-                ImageViewState state = imageDisplay.getStateRepository()
-                        .stateOf(imageDisplay.image().id());
-                state.setZoom(zoomSlider.getValue() / 100.0);
-                imageDisplay.repaint();
+            // Solo actuamos si el usuario está moviendo el slider manualmente
+            if (zoomSlider.getValueIsAdjusting()) {
+                controller.zoomTo(zoomSlider.getValue() / 100.0);
             }
         });
-
-
         panel.add(zoomSlider);
 
-
-        // Reset zoom y rotate
         panel.add(button("resetZoom", "Reset Zoom"));
         panel.add(button("rotate", "⟳"));
         panel.add(button("resetRotation", "Reset Rotate"));
         return panel;
     }
 
-
-    private JButton button(String name) {
-        JButton button = new JButton(name);
-        button.setFocusPainted(false);         // quita el borde de enfoque
-        button.setBorderPainted(false);        // quita el borde
-        button.setContentAreaFilled(false);    // quita el fondo
-        button.setOpaque(false);               // hace el botón transparente
-        button.addActionListener(e -> commands.get(name).execute());
-        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        return button;
+    public void updateLabels() {
+        Image image = imageDisplay.image();
+        if (image != null) {
+            double currentZoom = imageDisplay.getStateRepository()
+                    .stateOf(image.id()).zoom();
+            zoomSlider.setValue((int) (currentZoom * 100));
+        }
     }
 
     private JButton button(String name, String label) {
         JButton button = new JButton(label);
-        button.setFocusPainted(false);         // quita el borde de enfoque
-        button.setBorderPainted(false);        // quita el borde
-        button.setContentAreaFilled(false);    // quita el fondo
-        button.setOpaque(false);               // hace el botón transparente
+        button.setFocusPainted(false);
+        button.setBorderPainted(false);
+        button.setContentAreaFilled(false);
+        button.setOpaque(false);
         button.addActionListener(e -> commands.get(name).execute());
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         return button;

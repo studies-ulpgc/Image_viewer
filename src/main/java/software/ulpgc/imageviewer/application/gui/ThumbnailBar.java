@@ -22,57 +22,42 @@ public class ThumbnailBar extends JPanel {
         this.images = images;
 
         setLayout(new FlowLayout(FlowLayout.CENTER, 10, 5));
-        setBackground(new Color(0xD5, 0xD2, 0xF5));
+        setBackground(new Color(237, 236, 250));
         updateThumbnails();
+        this.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
     }
 
     private void updateThumbnails() {
         removeAll();
         for (Image img : images) {
             try {
-                byte[] data = img.bitmap();
-                if (data == null || data.length == 0) continue; // ignorar imagen inválida
-                BufferedImage thumb = ImageIO.read(new ByteArrayInputStream(data));
-                if (thumb == null) continue; // ignorar imagen que no se pudo leer
-
+                BufferedImage thumb = ImageIO.read(new ByteArrayInputStream(img.bitmap()));
+                // Escalar a miniatura de 80x60 px
                 ImageIcon icon = new ImageIcon(
                         thumb.getScaledInstance(80, 60, java.awt.Image.SCALE_SMOOTH)
                 );
 
                 JLabel label = new JLabel(icon);
-                label.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-                // Borde según estado
                 label.setBorder(BorderFactory.createLineBorder(
-                        img == mainDisplay.image() ? new Color(84, 100, 172) : Color.LIGHT_GRAY,
-                        img == mainDisplay.image() ? 4 : 1
-                ));
-
+                        img == mainDisplay.image() ? Color.BLUE : Color.LIGHT_GRAY, 2));
                 label.addMouseListener(new MouseAdapter() {
                     @Override
-                    public void mouseEntered(MouseEvent e) {
-                        if (img != mainDisplay.image())
-                            label.setBorder(BorderFactory.createLineBorder(Color.BLUE, 1));
-                    }
-                    @Override
-                    public void mouseExited(MouseEvent e) {
-                        if (img != mainDisplay.image())
-                            label.setBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY, 1));
-                    }
-                    @Override
                     public void mouseClicked(MouseEvent e) {
-                        mainDisplay.show(img);
-                        updateThumbnails();
+                        mainDisplay.show(img); // cambiar imagen central
+                        updateThumbnails();    // actualizar borde azul
                     }
                 });
-
                 add(label);
             } catch (IOException e) {
-                e.printStackTrace(); // si falla la lectura de esta imagen, seguimos con las demás
+                e.printStackTrace();
             }
         }
         revalidate();
         repaint();
     }
 
+    // Llamar cuando cambie la imagen central
+    public void refresh() {
+        updateThumbnails();
+    }
 }

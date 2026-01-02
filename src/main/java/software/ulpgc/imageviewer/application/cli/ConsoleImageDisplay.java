@@ -15,4 +15,8 @@ public class ConsoleImageDisplay implements ImageDisplay {
         this.image = image;
         System.out.printf("IMAGE: " + image.id() + " " +  image.bitmap().length);
     }
+
+    @Override
+    public void repaint() {
+    }
 }
