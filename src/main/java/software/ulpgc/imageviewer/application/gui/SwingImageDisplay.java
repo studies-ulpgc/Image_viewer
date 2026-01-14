@@ -96,7 +96,7 @@ public class SwingImageDisplay extends JPanel implements ImageDisplay {
 
         Result result = getResult(state, canvas);
 
-        draw_transformed_image((Graphics2D) g.create(), result.x(), result.scaledWidth(), result.y(), result.scaledHeight(), result.rotation());
+        drawTransformedImage((Graphics2D) g.create(), result.x(), result.scaledWidth(), result.y(), result.scaledHeight(), result.rotation());
 
         if (offsetX == 0) return;
         BufferedImage nextBitmap =
@@ -125,7 +125,7 @@ public class SwingImageDisplay extends JPanel implements ImageDisplay {
     private record Result(double rotation, double scaledWidth, double scaledHeight, double x, double y) {
     }
 
-    private void draw_transformed_image(Graphics2D g2, double x, double scaledWidth, double y, double scaledHeight, double rotation) {
+    private void drawTransformedImage(Graphics2D g2, double x, double scaledWidth, double y, double scaledHeight, double rotation) {
         g2.translate(x + scaledWidth / 2, y + scaledHeight / 2);
         g2.rotate(rotation);
         g2.translate(-scaledWidth / 2, -scaledHeight / 2);

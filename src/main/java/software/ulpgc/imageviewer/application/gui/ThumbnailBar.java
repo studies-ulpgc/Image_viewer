@@ -41,7 +41,7 @@ public class ThumbnailBar extends JPanel {
                 ImageIcon icon = new ImageIcon(
                         thumb.getScaledInstance(80, 60, SCALE_SMOOTH)
                 );
-                stablishing_colors(img, new JLabel(icon));
+                stablishingColors(img, new JLabel(icon));
             } catch (IOException e) {
                 e.printStackTrace();
             }
@@ -50,7 +50,7 @@ public class ThumbnailBar extends JPanel {
         repaint();
     }
 
-    private void stablishing_colors(Image img, JLabel label) {
+    private void stablishingColors(Image img, JLabel label) {
         label.setBorder(BorderFactory.createLineBorder(
                 img == mainDisplay.image() ? Color.BLUE : Color.LIGHT_GRAY, 2));
         label.addMouseListener(new MouseAdapter() {

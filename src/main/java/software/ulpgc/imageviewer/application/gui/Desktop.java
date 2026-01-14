@@ -76,7 +76,7 @@ public class Desktop extends JFrame {
         panel.add(button("zoomIn", "+"));
         panel.add(button("zoomOut", "-"));
 
-        set_zoom_slider(panel);
+        setZoomSlider(panel);
 
         panel.add(button("resetZoom", "Reset Zoom"));
         panel.add(button("rotate", "⟳"));
@@ -84,7 +84,7 @@ public class Desktop extends JFrame {
         return panel;
     }
 
-    private void set_zoom_slider(JPanel panel) {
+    private void setZoomSlider(JPanel panel) {
         zoomSlider = new JSlider(20, 500, 100);
         zoomSlider.setPreferredSize(new Dimension(150, 20));
         zoomSlider.setBackground(new Color(237, 236, 250));
@@ -102,13 +102,13 @@ public class Desktop extends JFrame {
 
     private JButton button(String name, String label) {
         JButton button = new JButton(label);
-        extract_button_colors(button);
+        extractButtonColors(button);
         button.addActionListener(e -> commands.get(name).execute());
         button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         return button;
     }
 
-    private static void extract_button_colors(JButton button) {
+    private static void extractButtonColors(JButton button) {
         button.setFocusPainted(false);
         button.setBorderPainted(false);
         button.setContentAreaFilled(false);
